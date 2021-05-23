@@ -19,6 +19,26 @@
             "kind": "build",
             "isDefault": true
             }
+        },
+        {
+            "type": "shell",
+            "label": "mpicc run active file",
+            "command": "mpirun -np ${input:<number_of_processes>} ./${fileBasenameNoExtension}.out",
+            "options": {
+            "cwd": "${workspaceFolder}"
+            },
+            "group": {
+            "kind": "test",
+            "isDefault": true
+            }
         }
-    ]
+    ],
+    "inputs": [
+        {
+          "id": "<number_of_processes>",
+          "type": "promptString",
+          "description": "Number of processes",
+          "default": "1"
+        }
+      ]
 }
