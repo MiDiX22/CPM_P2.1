@@ -6,6 +6,7 @@
             "label": "mpicc build active file",
             "command": "/usr/bin/mpicc",
             "args": [
+            "-O3",
             "-g",
             "${file}",
             "-o",
@@ -23,7 +24,7 @@
         {
             "type": "shell",
             "label": "mpicc run active file",
-            "command": "mpirun -np ${input:<number_of_processes>} ./${fileBasenameNoExtension}.out",
+            "command": "mpirun -np ${input:<number_of_processes>} ./${fileBasenameNoExtension}.out > par.txt",
             "options": {
             "cwd": "${workspaceFolder}"
             },
