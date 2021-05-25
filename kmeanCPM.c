@@ -16,20 +16,9 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
     int fD[N];
 
     do {
-        // for (i = 0; i < fN; i++) {
-        //     min = 0;
-        //     dif = abs(fV[i] - fR[0]);
-        //     for (j = 1; j < fK; j++)
-        //         if (abs(fV[i] - fR[j]) < dif) {
-        //             min = j;
-        //             dif = abs(fV[i] - fR[j]);
-        //         }
-        //     fD[i] = min;
-        // }
-        
         MPI_Send(fR, G, MPI_LONG, 1, 0, MPI_COMM_WORLD);
         MPI_Send(fV, N, MPI_LONG, 1, 0, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD); 
+        //MPI_Barrier(MPI_COMM_WORLD); 
 
         MPI_Recv(fD, N, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         //printf("0 - %i\n", fD[iter]);
@@ -142,7 +131,7 @@ int main() {
         {
             MPI_Recv(fR,G,MPI_LONG,0,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Recv(fV,N,MPI_LONG,0,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Barrier(MPI_COMM_WORLD);
+            //MPI_Barrier(MPI_COMM_WORLD);
             
             for (i = 0; i < N; i++) {
                 min = 0;
