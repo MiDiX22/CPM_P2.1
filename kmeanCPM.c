@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <mpi.h>
+#include <string.h>
 
 #define N 600000
 #define G 200
@@ -13,14 +14,28 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
     int i, j, min, iter = 0;
     long dif, t;
     long fS[G];
-    int fD[N];
+    int *fD = malloc(sizeof(int) * N);
+    int *temp_fD = malloc(sizeof(int) * N);
+    int world_size, el_meu_rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &el_meu_rank);
+
 
     do {
-        MPI_Send(fR, G, MPI_LONG, 1, 0, MPI_COMM_WORLD);
-        MPI_Send(fV, N, MPI_LONG, 1, 0, MPI_COMM_WORLD);
+        MPI_Bcast(fR,G,MPI_LONG,0,MPI_COMM_WORLD);
+        MPI_Bcast(fV,N,MPI_LONG,0,MPI_COMM_WORLD);
+        // MPI_Send(fR, G, MPI_LONG, 1, 0, MPI_COMM_WORLD);
+        // MPI_Send(fV, N, MPI_LONG, 1, 0, MPI_COMM_WORLD);
         //MPI_Barrier(MPI_COMM_WORLD); 
-
-        MPI_Recv(fD, N, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        for (int p = 1; p < world_size; p++)
+        {
+            MPI_Recv(temp_fD, N, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            //memcpy(fD + (el_meu_rank-1)*(N/(world_size-1)) * sizeof(int), 
+            //    temp_fD + (el_meu_rank-1)*(N/(world_size-1)) * sizeof(int),
+            //    sizeof(int)*(N/(world_size-1)));
+        }
+        fD = temp_fD;
+        
         //printf("0 - %i\n", fD[iter]);
         
         for (i = 0; i < fK; i++)
@@ -82,7 +97,7 @@ int main() {
     /* rank del proces    */
     int    el_meu_rank;
     /* numero de processos        */
-    int    p;
+    int    world_size;
     /* rank de l'emissor */
     int    font;
     /* rank del receptor */
@@ -99,7 +114,7 @@ int main() {
     /* Obtenir el rank del proces  */
    MPI_Comm_rank(MPI_COMM_WORLD, &el_meu_rank);
     /* Obtenir el numero total de processos */
-   MPI_Comm_size(MPI_COMM_WORLD, &p);
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
 
     if (el_meu_rank == 0) {
@@ -129,11 +144,13 @@ int main() {
         int *fD = malloc(sizeof(int) * N);
         do
         {
-            MPI_Recv(fR,G,MPI_LONG,0,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Recv(fV,N,MPI_LONG,0,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Bcast(fR,G,MPI_LONG,0,MPI_COMM_WORLD);
+            MPI_Bcast(fV,N,MPI_LONG,0,MPI_COMM_WORLD);
+            // MPI_Recv(fR,G,MPI_LONG,0,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            // MPI_Recv(fV,N,MPI_LONG,0,0,MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             //MPI_Barrier(MPI_COMM_WORLD);
             
-            for (i = 0; i < N; i++) {
+            for (i = ((el_meu_rank-1)*(N/(world_size-1))); i < (N/(world_size-1)); i++) {
                 min = 0;
                 temp = abs(fV[i] - fR[0]);
                 for (j = 1; j < G; j++)
@@ -143,7 +160,7 @@ int main() {
                     }
                 fD[i] = min;
             }
-            //printf("1 - %i\n", fD[iter]);
+            //printf("1 - %i\n", world_size);
             MPI_Send(fD, N, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
             //printf("1 - %d\n", fD[iter]);
