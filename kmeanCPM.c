@@ -1,22 +1,31 @@
 #include <stdlib.h>
-
 #include <stdio.h>
+#include <mpi.h>
 
 #define N 600000
 #define G 200
 
 long V[N];
 long R[G];
+long R2[G];
 int A[G];
+/* rank del proces    */
+int    el_meu_rank;
+/* numero de processos        */
+int    world_size;
 
 void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
     int i, j, min, iter = 0;
-    long dif, t;
+    long dif, t, dif_global;
     long fS[G];
-    int fD[N];
+    //int fD[N];
+    // int fD_local[N];
+    int *fD = (int *)malloc(sizeof(int) * N);
+    int *fD_local = (int *)malloc(sizeof(int) * N);
 
     do {
-        for (i = 0; i < fN; i++) {
+        //for (i = 0; i < fN; i++) {
+        for(i=(el_meu_rank)*(fN/world_size); i<(fN/world_size)*(el_meu_rank+1); i++) {
             min = 0;
             dif = abs(fV[i] - fR[0]);
             for (j = 1; j < fK; j++)
@@ -24,8 +33,18 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
                     min = j;
                     dif = abs(fV[i] - fR[j]);
                 }
-            fD[i] = min;
+            fD_local[i] = min;
         }
+        MPI_Allgather(
+            &fD_local[(el_meu_rank)*(fN/world_size)],
+            fN/world_size,
+            MPI_INT,
+            fD,
+            fN/world_size,
+            MPI_INT,
+            MPI_COMM_WORLD
+        );
+
 
         for (i = 0; i < fK; i++)
             fS[i] = fA[i] = 0;
@@ -44,7 +63,7 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
         iter++;
     } while (dif);
 
-    printf("iter %d\n", iter);
+    if (el_meu_rank == 0) printf("iter %d\n", iter);
 }
 
 void qs(int ii, int fi, long fV[], int fA[]) {
@@ -84,8 +103,15 @@ void qs(int ii, int fi, long fV[], int fA[]) {
 
 int main() {
     int i;
+    /* Inicialitzar MPI */
+    MPI_Init(NULL, NULL);
+    /* Obtenir el rank del proces  */
+    MPI_Comm_rank(MPI_COMM_WORLD, &el_meu_rank);
+    /* Obtenir el numero total de processos */
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-    for (i = 0; i < N; i++) V[i] = (rand() % rand()) / N;
+
+    for (i=0;i<N;i++) V[i] = (rand()%rand())/N;
 
     // primers candidats
     for (i = 0; i < G; i++) R[i] = V[i];
@@ -95,8 +121,13 @@ int main() {
 
     qs(0, G - 1, R, A);
 
-    for (i = 0; i < G; i++)
-        printf("R[%d] : %ld te %d agrupats\n", i, R[i], A[i]);
+    if (el_meu_rank == 0)
+    {
+        for (i = 0; i < G; i++)
+            printf("R[%d] : %ld te %d agrupats\n", i, R[i], A[i]);
+    }
 
+    
+    MPI_Finalize();
     return (0);
 }
