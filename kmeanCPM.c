@@ -17,7 +17,10 @@ int    world_size;
 void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
     int i, j, min, iter = 0;
     long dif, t, dif_global;
-    long fS[G];
+    // long fS[G];
+    long *fS = (long *)malloc(sizeof(long) * G);
+    long *fS_global = (long *)malloc(sizeof(long) * G);
+    int *fA_local = (int *)malloc(sizeof(long) * G);
     //int fD[N];
     // int fD_local[N];
     int *fD = (int *)malloc(sizeof(int) * N);
@@ -80,17 +83,34 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
 
 
         for (i = 0; i < fK; i++)
-            fS[i] = fA[i] = 0;
+            fS[i] = fA[i] = fA_local[i] = 0;
 
-        for (i = 0; i < fN; i++) {
+        for (i = start; i <= stop; i++) {
             fS[fD[i]] += fV[i];
-            fA[fD[i]]++;
+            fA_local[fD[i]]++;
         }
+        MPI_Allreduce(
+            fS,
+            fS_global,
+            G,
+            MPI_LONG,
+            MPI_SUM,
+            MPI_COMM_WORLD
+        );
+        MPI_Allreduce(
+            fA_local,
+            fA,
+            G,
+            MPI_INT,
+            MPI_SUM,
+            MPI_COMM_WORLD
+        );
+        // if (el_meu_rank == 0) printf("R[0] : %i * 2 = %i\n", fA[iter], fA_local[iter]);
 
         dif = 0;
         for (i = 0; i < fK; i++) {
             t = fR[i];
-            if (fA[i]) fR[i] = fS[i] / fA[i];
+            if (fA[i]) fR[i] = fS_global[i] / fA[i];
             dif += abs(t - fR[i]);
         }
         iter++;
@@ -153,9 +173,9 @@ int main() {
     kmean(N, G, V, R, A);
 
     qs(0, G - 1, R, A);
-
     if (el_meu_rank == 0)
     {
+
         for (i = 0; i < G; i++)
             printf("R[%d] : %ld te %d agrupats\n", i, R[i], A[i]);
     }
