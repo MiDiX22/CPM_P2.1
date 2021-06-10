@@ -67,15 +67,6 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
                 }
             fD_local[i] = min;
         }
-        // MPI_Allgather(
-        //     &fD_local[start],
-        //     fN/world_size,
-        //     MPI_INT,
-        //     fD,
-        //     fN/world_size,
-        //     MPI_INT,
-        //     MPI_COMM_WORLD
-        // );
         MPI_Allgatherv(
             &fD_local[start],
             counts[el_meu_rank],
