@@ -83,9 +83,23 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
             fS[i] = fA[i] = 0;
 
         for (i = 0; i < fN; i++) {
-            fS[fD[i]] += fV[i];
-            fA[fD[i]]++;
+            if(el_meu_rank == 0) fS[fD[i]] += fV[i];
+            if(el_meu_rank == 1) fA[fD[i]]++;
         }
+        MPI_Bcast(
+            fS,
+            G,
+            MPI_LONG,
+            0,
+            MPI_COMM_WORLD
+        );
+        MPI_Bcast(
+            fA,
+            G,
+            MPI_INT,
+            1,
+            MPI_COMM_WORLD
+        );
 
         dif = 0;
         for (i = 0; i < fK; i++) {
