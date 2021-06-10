@@ -22,9 +22,16 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
     // int fD_local[N];
     int *fD = (int *)malloc(sizeof(int) * N);
     int *fD_local = (int *)malloc(sizeof(int) * N);
+
+    long *fR_local = (long *)malloc(sizeof(long) * G);
+
     int start, stop;
     int count = fN / world_size;
     int remainder = fN % world_size;
+
+    int start_g, stop_g;
+    int count_g = fK / world_size;
+    int remainder_g = fK % world_size;
 
     if (el_meu_rank < remainder){
         start = el_meu_rank * (count + 1);
@@ -34,11 +41,27 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
         start = el_meu_rank * count + remainder;
         stop = start + (count - 1);
     }
+    if (el_meu_rank < remainder_g)
+    {
+        start_g = el_meu_rank * (count_g + 1);
+        stop_g = start_g + count_g;
+    }
+    else {
+        start_g = el_meu_rank * count_g + remainder_g;
+        stop_g = start_g + (count_g - 1);
+    }
+
+
     //
     int counts[world_size];
  
     // Define the displacements
     int displacements[world_size];
+    //
+    int counts_g[world_size];
+ 
+    // Define the displacements
+    int displacements_g[world_size];
 
 
     for (int i = 0; i < world_size; i++)
@@ -51,6 +74,16 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
             counts[i] = count;
             displacements[i] = i * count + remainder;
         }
+        if (i < remainder_g)
+        {
+            counts_g[i] = (count_g + 1);
+            displacements_g[i] = i * (count_g + 1);
+        }
+        else {
+            counts_g[i] = count_g;
+            displacements_g[i] = i * count_g + remainder_g;
+        }
+        
     }
     
 
@@ -67,15 +100,6 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
                 }
             fD_local[i] = min;
         }
-        // MPI_Allgather(
-        //     &fD_local[start],
-        //     fN/world_size,
-        //     MPI_INT,
-        //     fD,
-        //     fN/world_size,
-        //     MPI_INT,
-        //     MPI_COMM_WORLD
-        // );
         MPI_Allgatherv(
             &fD_local[start],
             counts[el_meu_rank],
@@ -97,13 +121,37 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[]) {
         }
 
         dif = 0;
-        for (i = 0; i < fK; i++) {
+        // for (i = 0; i < fK; i++) {
+        for (i = start_g; i <= stop_g; i++) {
             t = fR[i];
-            if (fA[i]) fR[i] = fS[i] / fA[i];
-            dif += abs(t - fR[i]);
+            if (fA[i]) {
+                fR_local[i] = fS[i] / fA[i];
+            }
+            else {
+                fR_local[i] = fR[i];
+            }
+            dif += abs(t - fR_local[i]);
         }
+        MPI_Allgatherv(
+            &fR_local[start_g],
+            counts_g[el_meu_rank],
+            MPI_LONG,
+            fR,
+            counts_g,
+            displacements_g,
+            MPI_LONG,
+            MPI_COMM_WORLD
+        );
+        MPI_Allreduce(
+            &dif,
+            &dif_global,
+            1,
+            MPI_LONG,
+            MPI_SUM,
+            MPI_COMM_WORLD
+        );
         iter++;
-    } while (dif);
+    } while (dif_global);
 
     if (el_meu_rank == 0) printf("iter %d\n", iter);
 }
